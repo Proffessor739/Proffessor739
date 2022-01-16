@@ -1,0 +1,68 @@
+local GunBarrel = game.Workspace.Camera:WaitForChild("Arms")
+local player = game:GetService("Players").LocalPlayer
+local BulletHolder = Instance.new("Folder", Workspace)
+local tool = script.Parent
+local Settings = require(script.Parent.Settings)
+
+tool.Equipped:Connect(function(mouse)
+
+	mouse.Button1Down:Connect(function()
+		print("Mouse pressed!")
+		local ray = Ray.new(GunBarrel.Barrel.CFrame.p, (mouse.Hit.p - GunBarrel.Barrel.CFrame.p).unit * 300)
+		local part, position = workspace:FindPartOnRay(ray, player.Character, false, true)
+		
+		
+		local beam = Instance.new("Part", workspace)
+		beam.Parent = BulletHolder
+		beam.BrickColor = BrickColor.new("Bright red")
+		beam.FormFactor = "Custom"
+		beam.Material = "Plastic"
+		beam.Transparency = 1
+		beam.Anchored = true
+		beam.Locked = true
+		beam.CanCollide = false
+		beam.CanTouch = false
+
+		local distance = (GunBarrel.Barrel.CFrame.p - position).magnitude
+		beam.Size = Vector3.new(0.1, 0.1, distance)
+		beam.CFrame = CFrame.new(GunBarrel.Barrel.CFrame.p, position) * CFrame.new(0, 0, -distance / 2)
+
+		game:GetService("Debris"):AddItem(beam, 0.1)
+
+		if part then
+			local humanoid = part.Parent:FindFirstChild("Humanoid")
+
+			if not humanoid then
+				humanoid = part.Parent.Parent:FindFirstChild("Humanoid")
+			end
+
+			if humanoid then
+				humanoid:TakeDamage(30)
+				if Settings.DamageIndicator == true then
+					local BillBoardGui = game.ReplicatedStorage.BillboardGui:Clone()
+					BillBoardGui.Parent = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+					local Text = BillBoardGui:FindFirstChild("TextLabel")
+					task.wait(0.3)
+					Text.TextTransparency = 0.3
+					task.wait(0.3)
+					Text.TextTransparency = 0.6
+					task.wait(0.3)
+					Text.TextTransparency = 1
+				else
+					print("Sadly Damage indicator is switched off")
+				end
+				
+				if Settings.Gore == true then
+					if humanoid.Parent:FindFirstChild("HumanoidRootPart")  then
+						local gore = game.ReplicatedStorage.Particles.GorePart.ParticleEmitter:Clone()
+						gore.Parent = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+						task.wait(1)
+						gore:Destroy()
+					else
+						print("Gore is off")
+					end
+				end
+			end
+		end
+	end)
+end)
