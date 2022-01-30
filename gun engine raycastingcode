@@ -1,67 +1,76 @@
-local GunBarrel = game.Workspace.Camera:WaitForChild("Arms")
-local player = game:GetService("Players").LocalPlayer
-local BulletHolder = Instance.new("Folder", Workspace)
 local tool = script.Parent
-local Settings = require(script.Parent.Settings)
+local origin = tool:WaitForChild("Handle").Origin 
 
-tool.Equipped:Connect(function(mouse)
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local AmmoValue = game.ReplicatedStorage.Ammo
 
+local Laserevent = script.Parent.RemoteEvents.LaserFire
+local laserFolder = game.Workspace.Folder
+
+tool.Activated:Connect(function()
+	local mousePostion = mouse.Hit.p
+	local originPosition = origin.Position
+
+	Laserevent:FireServer(mousePostion, originPosition)
+end)
+
+script.Parent.Equipped:Connect(function()
 	mouse.Button1Down:Connect(function()
-		print("Mouse pressed!")
-		local ray = Ray.new(GunBarrel.Barrel.CFrame.p, (mouse.Hit.p - GunBarrel.Barrel.CFrame.p).unit * 300)
-		local part, position = workspace:FindPartOnRay(ray, player.Character, false, true)
-		
-		
-		local beam = Instance.new("Part", workspace)
-		beam.Parent = BulletHolder
-		beam.BrickColor = BrickColor.new("Bright red")
-		beam.FormFactor = "Custom"
-		beam.Material = "Plastic"
-		beam.Transparency = 1
-		beam.Anchored = true
-		beam.Locked = true
-		beam.CanCollide = false
-		beam.CanTouch = false
+		AmmoValue.Value = AmmoValue.Value -1
+		if AmmoValue.Value == 0 then
+			script.Disabled = true
+		end
+	end)
+end)
 
-		local distance = (GunBarrel.Barrel.CFrame.p - position).magnitude
-		beam.Size = Vector3.new(0.1, 0.1, distance)
-		beam.CFrame = CFrame.new(GunBarrel.Barrel.CFrame.p, position) * CFrame.new(0, 0, -distance / 2)
+local function Aim()
+	local camera = game.Workspace:FindFirstChild("Camera")
+	camera.FieldOfView = 30
 
-		game:GetService("Debris"):AddItem(beam, 0.1)
+	local starterplayer = game:GetService("StarterPlayer")
 
-		if part then
-			local humanoid = part.Parent:FindFirstChild("Humanoid")
+	starterplayer.CameraMaxZoomDistance = 10
+	starterplayer.CameraMinZoomDistance = 10
 
-			if not humanoid then
-				humanoid = part.Parent.Parent:FindFirstChild("Humanoid")
-			end
+	local player = game.Players.LocalPlayer
+	local char = player.CharacterAdded:Wait()
+	local humanoid = char.Humanoid
 
-			if humanoid then
-				humanoid:TakeDamage(30)
-				if Settings.DamageIndicator == true then
-					local BillBoardGui = game.ReplicatedStorage.BillboardGui:Clone()
-					BillBoardGui.Parent = humanoid.Parent:FindFirstChild("HumanoidRootPart")
-					local Text = BillBoardGui:FindFirstChild("TextLabel")
-					task.wait(0.3)
-					Text.TextTransparency = 0.3
-					task.wait(0.3)
-					Text.TextTransparency = 0.6
-					task.wait(0.3)
-					Text.TextTransparency = 1
-				else
-					print("Sadly Damage indicator is switched off")
-				end
-				
-				if Settings.Gore == true then
-					if humanoid.Parent:FindFirstChild("HumanoidRootPart")  then
-						local gore = game.ReplicatedStorage.Particles.GorePart.ParticleEmitter:Clone()
-						gore.Parent = humanoid.Parent:FindFirstChild("HumanoidRootPart")
-						task.wait(1)
-						gore:Destroy()
-					else
-						print("Gore is off")
-					end
-				end
+	humanoid.WalkSpeed = 5
+
+	print(player.Name .. " is aiming")
+
+end
+
+local function StopAim()
+	local camera = game.Workspace.Camera
+	camera.FieldOfView = 70
+	print(player.Name .. " stopped aiming")
+end
+
+tool.Equipped:Connect(function()
+	mouse.Button2Down:Connect(Aim)
+	mouse.Button2Up:Connect(StopAim)
+	script.Parent.Client.Sounds.Equip:Play()
+end)
+
+
+local function Unequip()
+	local camera = game.Workspace.Camera
+	camera.FieldOfView = 70
+end
+
+tool.Unequipped:Connect(Unequip)
+
+script.Parent.Equipped:Connect(function()
+	local player = game:GetService("Players").LocalPlayer
+	local character = player.Character or player.CharacterAdded:Wait()
+	
+	game:GetService("RunService").RenderStepped:Connect(function()
+		for i, part in pairs(character:GetChildren()) do
+			if string.match(part.Name, "Arm") or string.match(part.Name, "Hand") then
+				part.LocalTransparencyModifier = 0
 			end
 		end
 	end)
