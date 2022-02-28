@@ -1,0 +1,188 @@
+--░█████╗░██╗░░░░░██╗███████╗███╗░░██╗████████╗  ░██████╗░█████╗░██████╗░██╗██████╗░████████╗
+--██╔══██╗██║░░░░░██║██╔════╝████╗░██║╚══██╔══╝  ██╔════╝██╔══██╗██╔══██╗██║██╔══██╗╚══██╔══╝
+--██║░░╚═╝██║░░░░░██║█████╗░░██╔██╗██║░░░██║░░░  ╚█████╗░██║░░╚═╝██████╔╝██║██████╔╝░░░██║░░░
+--██║░░██╗██║░░░░░██║██╔══╝░░██║╚████║░░░██║░░░  ░╚═══██╗██║░░██╗██╔══██╗██║██╔═══╝░░░░██║░░░
+--╚█████╔╝███████╗██║███████╗██║░╚███║░░░██║░░░  ██████╔╝╚█████╔╝██║░░██║██║██║░░░░░░░░██║░░░
+--░╚════╝░╚══════╝╚═╝╚══════╝╚═╝░░╚══╝░░░╚═╝░░░  ╚═════╝░░╚════╝░╚═╝░░╚═╝╚═╝╚═╝░░░░░░░░╚═╝░░░
+
+--These are the important variables
+--All of this code that you can see is used for stuff like sounds ammo and etc
+--It only excecutes for the player who is holding the tool due to its a local script
+
+
+local tool = script.Parent
+local origin = tool:WaitForChild("Handle").Origin 
+
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local AmmoValue = game.ReplicatedStorage.Ammo
+
+local Laserevent = script.Parent.RemoteEvents.LaserFire
+local laserFolder = game.Workspace.Folder
+
+--These 5 lines of code are super important due to they are the ones that send a signal to the ray cast main so that it will make the bullet work
+
+tool.Activated:Connect(function()
+	local mousePostion = mouse.Hit.p
+	local originPosition = origin.Position
+
+	Laserevent:FireServer(mousePostion, originPosition)
+end)
+
+
+--This code is used for the ammo system 
+
+script.Parent.Equipped:Connect(function()
+	mouse.Button1Down:Connect(function()
+		AmmoValue.Value = AmmoValue.Value -1
+		if AmmoValue.Value == 0 then
+			script.Disabled = true
+		end
+	end)
+end)
+
+--This is the function for the aiming
+
+local function Aim()
+	local camera = game.Workspace:FindFirstChild("Camera")
+	camera.FieldOfView = 30
+
+	local starterplayer = game:GetService("StarterPlayer")
+
+	starterplayer.CameraMaxZoomDistance = 10
+	starterplayer.CameraMinZoomDistance = 10
+
+	local player = game.Players.LocalPlayer
+	local char = player.CharacterAdded:Wait()
+	local humanoid = char.Humanoid
+
+	humanoid.WalkSpeed = 5
+
+	print(player.Name .. " is aiming")
+
+end
+--This is the function for stopping to aim
+
+local function StopAim()
+	local camera = game.Workspace.Camera
+	camera.FieldOfView = 70
+	print(player.Name .. " stopped aiming")
+end
+
+--This is used for playing equip sound
+
+tool.Equipped:Connect(function()
+	mouse.Button2Down:Connect(Aim)
+	mouse.Button2Up:Connect(StopAim)
+	script.Parent.Client.Sounds.Equip:Play()
+end)
+
+--This is the function for unequipping
+
+local function Unequip()
+	local camera = game.Workspace.Camera
+	camera.FieldOfView = 70
+end
+
+--This is used for running the unequipping function
+
+tool.Unequipped:Connect(Unequip)
+
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local character = player.Character
+
+if not character or not character.Parent then
+	character = player.CharacterAdded:Wait()
+end
+
+local humanoid = character:WaitForChild("Humanoid")
+local animation = tool.Idle
+local idleanim = humanoid:LoadAnimation(animation)
+
+local function idle()
+	idleanim:Play()
+end
+
+local function stopanim()
+	idleanim:Stop()
+end
+
+tool.Equipped:Connect(idle)
+tool.Unequipped:Connect(stopanim)
+mouse.Icon = "http://www.roblox.com/asset/?id=8259335784"
+
+local RunService = game:GetService("RunService")
+
+local Player = game.Players.LocalPlayer
+local PlayerMouse = Player:GetMouse()
+
+local Camera = workspace.CurrentCamera
+
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Head = Character:WaitForChild("Head")
+local Neck = Head:WaitForChild("Neck")
+
+local Torso = Character:WaitForChild("UpperTorso")
+local Waist = Torso:WaitForChild("Waist")
+
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local NeckOriginC0 = Neck.C0
+local WaistOriginC0 = Waist.C0
+
+Neck.MaxVelocity = 3/3
+
+RunService.RenderStepped:Connect(function() 
+	local CameraCFrame = Camera.CoordinateFrame
+
+	if Character:FindFirstChild("UpperTorso") and Character:FindFirstChild("Head") then
+		local TorsoLookVector = Torso.CFrame.lookVector
+		local HeadPosition = Head.CFrame.p
+
+		if Neck and Waist then
+			if Camera.CameraSubject:IsDescendantOf(Character) or Camera.CameraSubject:IsDescendantOf(Player) then
+				local Point = PlayerMouse.Hit.p
+
+				local Distance = (Head.CFrame.p - Point).magnitude
+				local Difference = Head.CFrame.Y - Point.Y
+
+				Neck.C0 = Neck.C0:lerp(NeckOriginC0 * CFrame.Angles(-(math.atan(Difference / Distance) * 1), (((HeadPosition - Point).Unit):Cross(TorsoLookVector)).Y * 1, 0), 0.5 / 2)
+				Waist.C0 = Waist.C0:lerp(WaistOriginC0 * CFrame.Angles(-(math.atan(Difference / Distance) * 1), (((HeadPosition - Point).Unit):Cross(TorsoLookVector)).Y * 0.5, 0), 0.5 / 2)
+			end
+		end
+	end	
+end)
+
+local Runservice = game:GetService("RunService")
+local viewmodel = game.ReplicatedFirst.ViewModels.BerettaArms:Clone()
+local cam = game.Workspace.Camera
+local gunbobcf = CFrame.new()
+
+local character = game:GetService("Players").LocalPlayer.Character or  game:GetService("Players").LocalPlayer.CharacterAdded:Wait()
+local head = Character:WaitForChild("Head")
+local CArea = Instance.new("Folder", game.ReplicatedFirst)
+
+tool.Equipped:Connect(function()
+	
+	local function FirstPerson()
+		if (game.Workspace.CurrentCamera.CFrame.Position - head.Position).Magnitude < .8 then
+			Runservice.RenderStepped:Connect(function()
+				viewmodel.Parent = cam
+				viewmodel:SetPrimaryPartCFrame(Camera.CFrame * gunbobcf * CFrame.new(0,0,0))
+			end)
+		end
+	end
+
+	Runservice.RenderStepped:Connect(FirstPerson)
+	
+end)
+
+
+
+
+
+
+
